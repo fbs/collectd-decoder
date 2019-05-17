@@ -162,25 +162,32 @@ TYPES = {
 def decode(pkt, **kwargs):
     """
     Decode a single packet
+
+    returns: a list of [type, data, packet offset] lists
     """
     offset = 0
+    dataset = []
     while True:
         # TODO: bounds checking
         _type, _len = header.unpack_from(pkt, offset)
-        data = pkt[offset:offset + header.size + _len]
+        _data = pkt[offset:offset + header.size + _len]
         if _type == TYPE_ENCR_AES256:
             passwd = kwargs['password']
             if passwd is None:
                 raise ValueError("Encrypted packet found but no password set (-p mypasss)")
-            decode(decrypt(data, passwd), **kwargs)
+            return decode(decrypt(_data, passwd), **kwargs)
         elif _type == TYPE_SIGN_SHA256:
             raise("TYPE_SIGN unimplemented")
         else:
             f = DECODE[_type]
-            print("{} {}".format(TYPES[_type], f(_type, _len, data, **kwargs)))
+            res = f(_type, _len, _data, **kwargs)
+            name = TYPES[_type]
+            dataset.append([_type, res, offset])
+            # print("{} {}".format(name, res))
         offset += _len
         if offset >= len(pkt):
             break
+    return dataset
 
 
 def cdtime_to_time(cdt):
@@ -190,6 +197,51 @@ def cdtime_to_time(cdt):
     nsec = ((cdt & 0b111111111111111111111111111111) / 1.073741824) / 10**9
     assert 0 <= nsec < 1
     return sec + nsec
+
+def pretty_print(data):
+    host = ""
+    time_ = ""
+    interval = ""
+    plugin_ = ""
+    plugin_instance = ""
+    type_ = ""
+    type_instance = ""
+
+    # The packet format has some deduplication to prevent adding
+    # the same path elements for every value, making it tree like.
+    #
+    # This walks through all packet data, resetting values deeper
+    # down than the one encountered
+    for d in data:
+        _t, _v, _o = d
+        if _t == TYPE_HOST:
+            print("HOST: " + _v)
+            plugin_ = ""
+            plugin_instance = ""
+            type_ = ""
+            type_instance = ""
+        elif _t == TYPE_INTERVAL or _t == TYPE_INTERVALHR:
+            print("INTERVAL: " + str(_v))
+        elif _t == TYPE_TIME or _t == TYPE_TIMEHR:
+            time_ = _v
+        elif _t == TYPE_PLUGIN:
+            plugin_ = _v
+            plugin_instance = ""
+            type_ = ""
+            type_instance = ""
+        elif _t == TYPE_PLUGIN_INSTANCE:
+            plugin_instance = _v
+            type_ = ""
+            type_instance = ""
+        elif _t == TYPE_TYPE:
+            type_ = _v
+            type_instance = ""
+        elif _t == TYPE_TYPE_INSTANCE:
+            type_instance = _v
+        elif _t == TYPE_VALUES:
+            print("{:5d}:  {}/{}/{}/{} = {}".format(_o, plugin_, plugin_instance, type_, type_instance, _v))
+        else:
+            print("UNIMPLEMETNED: " + str(_t))
 
 
 def main():
@@ -207,9 +259,11 @@ def main():
         if p[UDP] and p[UDP].dport == 25826:
             try:
                 print("#"*40)
-                decode(p[UDP].load, **vars(args))
+                dataset = decode(p[UDP].load, **vars(args))
+                pretty_print(dataset)
             except Exception as e:
                 print("Failed to decode packet: {}".format(e))
+
 
 
 if __name__ == "__main__":
