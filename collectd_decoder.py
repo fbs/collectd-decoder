@@ -199,7 +199,7 @@ def cdtime_to_time(cdt):
     return sec + nsec
 
 def pretty_print(data):
-    host = ""
+    host_ = ""
     time_ = ""
     interval = ""
     plugin_ = ""
@@ -208,34 +208,29 @@ def pretty_print(data):
     type_instance = ""
 
     # The packet format has some deduplication to prevent adding
-    # the same path elements for every value, making it tree like.
-    #
-    # This walks through all packet data, resetting values deeper
-    # down than the one encountered
+    # the same path elements for every value. Only the values that
+    # need updating are shipped. So need to keep track of old values
+    # and overwrite where needing
     for d in data:
         _t, _v, _o = d
         if _t == TYPE_HOST:
             print("HOST: " + _v)
+            host_ = _v
             plugin_ = ""
             plugin_instance = ""
             type_ = ""
             type_instance = ""
         elif _t == TYPE_INTERVAL or _t == TYPE_INTERVALHR:
+            interval = _v
             print("INTERVAL: " + str(_v))
         elif _t == TYPE_TIME or _t == TYPE_TIMEHR:
             time_ = _v
         elif _t == TYPE_PLUGIN:
             plugin_ = _v
-            plugin_instance = ""
-            type_ = ""
-            type_instance = ""
         elif _t == TYPE_PLUGIN_INSTANCE:
             plugin_instance = _v
-            type_ = ""
-            type_instance = ""
         elif _t == TYPE_TYPE:
             type_ = _v
-            type_instance = ""
         elif _t == TYPE_TYPE_INSTANCE:
             type_instance = _v
         elif _t == TYPE_VALUES:
@@ -243,7 +238,7 @@ def pretty_print(data):
                                                       plugin_instance, type_,
                                                       type_instance, _v))
         else:
-            print("UNIMPLEMETNED: " + str(_t))
+            print("UNIMPLEMENTED: " + str(_t))
 
 
 def main():
