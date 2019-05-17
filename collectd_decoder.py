@@ -239,7 +239,9 @@ def pretty_print(data):
         elif _t == TYPE_TYPE_INSTANCE:
             type_instance = _v
         elif _t == TYPE_VALUES:
-            print("{:5d}:  {}/{}/{}/{} = {}".format(_o, plugin_, plugin_instance, type_, type_instance, _v))
+            print("{:5d}: {} {}/{}/{}/{} = {}".format(_o, time_, plugin_,
+                                                      plugin_instance, type_,
+                                                      type_instance, _v))
         else:
             print("UNIMPLEMETNED: " + str(_t))
 
