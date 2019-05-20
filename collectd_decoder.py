@@ -116,9 +116,15 @@ def parse_val(_type, _len, data, **kwargs):
 
 def parse_time(_type, _len, data, **kwargs):
     v = parse_num(_type, _len, data)
+    if _type == TYPE_INTERVAL:
+        return v
+
+    if _type == TYPE_TIME:
+        return time.ctime(v) + " (" + str(v) + ")"
+
     pt = cdtime_to_time(v)
 
-    if _type == TYPE_INTERVAL or _type == TYPE_INTERVALHR:
+    if _type == TYPE_INTERVALHR:
         return pt
 
     if kwargs.get('parse_time', False):
